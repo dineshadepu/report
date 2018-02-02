@@ -19,9 +19,15 @@ incompressible SPH(PCISPH) are the schemes whih solve fluid for incompressibilit
 
   \begin{equation}
     \label{eq:continuity}%
-    \frac{D\rho}{Dt} = -\nabla \cdot \uline{u}
+    \frac{D\rho}{Dt} = -\nabla \cdot \underline{u}
   \end{equation}
 
+  Momentum conservation equation for a fluid particle can be written as
+
+  \begin{equation}
+    \label{eq:momentum}%
+    \frac{D\uline{u}}{Dt} = - \frac{\nabla p}{\rho} + \nu \nabla^2{\uline{u}} + \uline{g}
+  \end{equation}
 
 * SPH basics
   Any function can be approximated by using its neighbouring points by
@@ -62,26 +68,116 @@ incompressible SPH(PCISPH) are the schemes whih solve fluid for incompressibilit
    basic vector identity we have
 
    \begin{equation*}
-     \nabla\cdot(f \uline{u}) = \uline{u} \cdot \nabla{f} +  f \; \nabla \cdot \uline{u}
+     \nabla\cdot(f \uline{u}) = \uline{u} \cdot \nabla{f} +
+                                f \; \nabla \cdot \uline{u}
    \end{equation*}
 
    From which the divergence of a vector is computed as
 
    \begin{equation*}
-     \nabla \cdot \uline{u} = \frac{1}{f} \Big[\nabla\cdot(f \uline{u}) - \uline{u} \cdot \nabla{f} \Big]
+     \nabla \cdot \uline{u} = \frac{1}{f} \Big[\nabla\cdot(f \uline{u}) -
+                              \uline{u} \cdot \nabla{f} \Big]
    \end{equation*}
 
    In our case /f/ is $\rho$, and /_u_/ is velocity.
    With particle approximation,
 
    \begin{equation*}
-     \nabla \cdot \uline{u}_i = \frac{1}{\rho_i} \Big[\nabla\cdot(f_i \uline{u}_i) - \uline{u}_i \cdot \nabla{\rho}_i \Big]
+     \nabla \cdot \uline{u}_i = \frac{1}{\rho_i} \Big[\nabla\cdot(f_i \uline{u}_i) -
+                                 \uline{u}_i \cdot \nabla{\rho}_i \Big]
    \end{equation*}
 
+   Applying SPH approximation would be
+
+   # latex equation
+   \begin{equation*}
+     \nabla \cdot \uline{u}_i &=  \frac{1}{\rho_i} \Big[ \sum_j \frac{m_j}{\rho_j} \rho_j \uline{u}_j \cdot \nabla_i W_{ij}
+                                  -  \sum_j \frac{m_j}{\rho_j} \rho_j \uline{u}_i \cdot \nabla_i W_{ij} \Big]
+   \end{equation*}
+
+   Which gives us divergence approximation in terms of density
+
+   \begin{equation}
+     \label{eq:divergence_sph}%
+     \nabla \cdot \uline{u}_i &=  \frac{1}{\rho_i} \Big[ \sum_j {m_j} (\uline{u}_j
+                                  - \uline{u}_i) \cdot \nabla_i W_{ij} \Big]
+   \end{equation}
 
 
 
 
+* Implicit Incompressible Smoothed Particle Hydrodynamics (IISPH)
+  This scheme solver incompressibility of fluid by solving a linear
+  system. It is presented by Markus Ihmsen
+  cite:ihmsen-2014-implic-incom-sph.
+
+  The basic idea of the scheme is to advect the particles with all the
+  forces except pressure.  Now find the pressure force which will make
+  the final velocity divergence free.
+
+
+** Advect the particles
+  From momentum equation eqref:eq:momentum, forces acting on a fluid
+  particle are, gravity, viscous force and pressure.
+
+  As the first step we advect the particles to next time step by all
+  the forces except pressure force.
+
+  \begin{equation}
+    \label{eq:iisph_advection}%
+    \uline{u}_i^{*}(t + dt) = \uline{u}_i(t) + \delta{t} \;
+                              \frac{1}{m_i} \uline{F}(t)_i^{\text{all except pressure}}
+  \end{equation}
+
+  Where \uline{u}_i^{*}(t + dt) is velocity at intermediate step. Once
+  we find the velocity at intermediate step, now we find the pressure
+  force which will make it divergence free. Let's suppose such
+  pressure forces as /F^p_i/. Now the final velocity with such
+  pressure force would be
+
+** Pressure poisson equation
+
+  \begin{equation*}
+    \uline{u}_i(t + dt) = \uline{u}_i^{*}(t+dt) + \delta{t} \;
+                                \frac{1}{m_i} \; \uline{F}(t)_i^{p}
+  \end{equation*}
+
+  Since the final velocity after pressure force correction is divergence free,
+  lets take divergence on both sides.
+
+  \begin{equation*}
+    \nabla \cdot \uline{u}_i(t + dt) = \nabla \cdot \uline{u}_i^{*}(t+dt) + \delta{t} \;
+                                       \frac{1}{m_i} \;  \nabla \cdot \uline{F}(t)_i^{p}
+  \end{equation*}
+
+  Since final velocity is divergence free,
+
+  \begin{equation*}
+    \nabla \cdot \uline{u}_i(t + dt) = 0
+  \end{equation*}
+  which gives
+
+  \begin{equation*}
+     \nabla \cdot \uline{u}_i^{*}(t+dt) = - \delta{t} \;
+                                       \frac{1}{m_i} \;  \nabla \cdot \uline{F}(t)_i^{p}
+  \end{equation*}
+
+  Pressure force is given by
+
+  \begin{equation*}
+    \frac{1}{m_i}  F(t)_i^{p} = - \frac{\nabla p_i}{\rho_i}
+  \end{equation*}
+
+  Which gives us the final pressure Poisson equation(PPE) as
+
+  \begin{equation}
+    \label{eq:ppe}%
+    \nabla \cdot \nabla p_i = \frac{\rho_i}{\delta{t}} \nabla \cdot \uline{u}_i^{*}(t+dt)
+  \end{equation}
+
+
+** Obtaining a linear system
+   Right hand side of PPE can be derived in terms of density difference.
 
 * Bibliography
   bibliography:~/Dropbox/Research/references.bib
