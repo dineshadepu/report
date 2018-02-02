@@ -1,0 +1,88 @@
+#+LaTeX_CLASS: report
+#+LaTeX_CLASS_OPTIONS: [12pt]
+#+TITLE: Overview of Incompressible Smoothed Particle Hydrodynamics
+#+AUTHOR: Dinesh A
+#+OPTIONS: date:nil
+#+STARTUP: showall
+
+
+
+\begin{abstract}
+In the following report incompressible SPH schemes are explained in detail.
+Implicit incompressible SPH (IISPH), Divergence free SPH(DFSPH), Predictive corrective
+incompressible SPH(PCISPH) are the schemes whih solve fluid for incompressibility.
+\end{abstract}
+
+
+* Fluid equations
+  Mass conservation equation for a fluid particle can be written as
+
+  \begin{equation}
+    \label{eq:continuity}%
+    \frac{D\rho}{Dt} = -\nabla \cdot \uline{u}
+  \end{equation}
+
+
+* SPH basics
+  Any function can be approximated by using its neighbouring points by
+  delta function. Which later can be extended to a kernel function W.
+
+
+** Function and gradient approximation
+
+  \begin{equation}
+    \label{eq:f_app}%
+    A(x_i) = \sum_i \frac{m_j}{\rho_j} A(x_j) W_{ij}
+  \end{equation}
+
+
+  Similarly derivative of a function can be approximated by
+
+  \begin{equation}
+    \label{eq:df_app}%
+    \nabla A(x_i) = \sum_i \frac{m_j}{\rho_j} A(x_j) \nabla_i W_{ij}
+  \end{equation}
+
+  Where /A/ is a scalar function, /_A_/ is a vector function.
+
+
+
+** Divergence approximation
+   Approximation of divergence of a function is necessary to
+   approximate continuity equation eqref:eq:continuity.
+   One simple way of approximating would be directly by using the
+   function approximation, and extending it to divergence.
+
+   \begin{equation*}
+     \nabla \cdot \uline{A}(x_i) = \sum_i \frac{m_j}{\rho_j} \uline{A}(x_j) \cdot \nabla_i W_{ij}
+   \end{equation*}
+
+   A better approximation would be done by using density from /First
+   golden rule of SPH/ cite:monaghan-1992-smoot-partic-hydrod.  From
+   basic vector identity we have
+
+   \begin{equation*}
+     \nabla\cdot(f \uline{u}) = \uline{u} \cdot \nabla{f} +  f \; \nabla \cdot \uline{u}
+   \end{equation*}
+
+   From which the divergence of a vector is computed as
+
+   \begin{equation*}
+     \nabla \cdot \uline{u} = \frac{1}{f} \Big[\nabla\cdot(f \uline{u}) - \uline{u} \cdot \nabla{f} \Big]
+   \end{equation*}
+
+   In our case /f/ is $\rho$, and /_u_/ is velocity.
+   With particle approximation,
+
+   \begin{equation*}
+     \nabla \cdot \uline{u}_i = \frac{1}{\rho_i} \Big[\nabla\cdot(f_i \uline{u}_i) - \uline{u}_i \cdot \nabla{\rho}_i \Big]
+   \end{equation*}
+
+
+
+
+
+
+* Bibliography
+  bibliography:~/Dropbox/Research/references.bib
+  bibliographystyle:unsrt
