@@ -1,12 +1,9 @@
+# -*- org-export-babel-evaluate: nil -*-
 #+LaTeX_CLASS: report
-#+LaTeX_CLASS_OPTIONS: [12pt]
+#+LaTeX_CLASS_OPTIONS: [11pt]
 #+TITLE: Overview of Incompressible Smoothed Particle Hydrodynamics
 #+AUTHOR: Dinesh A
 #+OPTIONS: date:nil
-#+STARTUP: showall
-
-
-
 \begin{abstract}
 In the following report incompressible SPH schemes are explained in detail.
 Implicit incompressible SPH (IISPH), Divergence free SPH(DFSPH), Predictive corrective
@@ -19,19 +16,21 @@ incompressible SPH(PCISPH) are the schemes whih solve fluid for incompressibilit
 
   \begin{equation}
     \label{eq:continuity}%
-    \frac{D\rho}{Dt} = -\nabla \cdot \underline{u}
+    \frac{D\rho}{Dt} = - \rho \; \nabla \cdot \underline{u}
   \end{equation}
+
+
 
   Momentum conservation equation for a fluid particle can be written as
 
   \begin{equation}
     \label{eq:momentum}%
-    \frac{D\uline{u}}{Dt} = - \frac{\nabla p}{\rho} + \nu \nabla^2{\uline{u}} + \uline{g}
+    \frac{D\underline{u}}{Dt} = - \frac{\nabla p}{\rho} + \nu \nabla^2{\underline{u}} + \underline{g}
   \end{equation}
 
 * SPH basics
   Any function can be approximated by using its neighbouring points by
-  delta function. Which later can be extended to a kernel function W.
+  Delta function. Which later can be extended to a kernel function W.
 
 
 ** Function and gradient approximation
@@ -42,17 +41,6 @@ incompressible SPH(PCISPH) are the schemes whih solve fluid for incompressibilit
   \end{equation}
 
 
-  Similarly derivative of a function can be approximated by
-
-  \begin{equation}
-    \label{eq:df_app}%
-    \nabla A(x_i) = \sum_i \frac{m_j}{\rho_j} A(x_j) \nabla_i W_{ij}
-  \end{equation}
-
-  Where /A/ is a scalar function, /_A_/ is a vector function.
-
-
-
 ** Divergence approximation
    Approximation of divergence of a function is necessary to
    approximate continuity equation eqref:eq:continuity.
@@ -60,7 +48,7 @@ incompressible SPH(PCISPH) are the schemes whih solve fluid for incompressibilit
    function approximation, and extending it to divergence.
 
    \begin{equation*}
-     \nabla \cdot \uline{A}(x_i) = \sum_i \frac{m_j}{\rho_j} \uline{A}(x_j) \cdot \nabla_i W_{ij}
+     \nabla \cdot \underline{A}(x_i) = \sum_i \frac{m_j}{\rho_j} \underline{A}(x_j) \cdot \nabla_i W_{ij}
    \end{equation*}
 
    A better approximation would be done by using density from /First
@@ -68,40 +56,270 @@ incompressible SPH(PCISPH) are the schemes whih solve fluid for incompressibilit
    basic vector identity we have
 
    \begin{equation*}
-     \nabla\cdot(f \uline{u}) = \uline{u} \cdot \nabla{f} +
-                                f \; \nabla \cdot \uline{u}
+     \nabla\cdot(f \underline{u}) = \underline{u} \cdot \nabla{f} +
+                                f \; \nabla \cdot \underline{u}
    \end{equation*}
 
    From which the divergence of a vector is computed as
 
    \begin{equation*}
-     \nabla \cdot \uline{u} = \frac{1}{f} \Big[\nabla\cdot(f \uline{u}) -
-                              \uline{u} \cdot \nabla{f} \Big]
+     \nabla \cdot \underline{u} = \frac{1}{f} \Big[\nabla\cdot(f \underline{u}) -
+                              \underline{u} \cdot \nabla{f} \Big]
    \end{equation*}
 
    In our case /f/ is $\rho$, and /_u_/ is velocity.
    With particle approximation,
 
    \begin{equation*}
-     \nabla \cdot \uline{u}_i = \frac{1}{\rho_i} \Big[\nabla\cdot(f_i \uline{u}_i) -
-                                 \uline{u}_i \cdot \nabla{\rho}_i \Big]
+     \nabla \cdot \underline{u}_i = \frac{1}{\rho_i} \Big[\nabla\cdot(f_i \underline{u}_i) -
+                                 \underline{u}_i \cdot \nabla{\rho}_i \Big]
    \end{equation*}
 
    Applying SPH approximation would be
 
    # latex equation
    \begin{equation*}
-     \nabla \cdot \uline{u}_i &=  \frac{1}{\rho_i} \Big[ \sum_j \frac{m_j}{\rho_j} \rho_j \uline{u}_j \cdot \nabla_i W_{ij}
-                                  -  \sum_j \frac{m_j}{\rho_j} \rho_j \uline{u}_i \cdot \nabla_i W_{ij} \Big]
+     \nabla \cdot \underline{u}_i =  \frac{1}{\rho_i} \Big[ \sum_j \frac{m_j}{\rho_j} \rho_j \underline{u}_j \cdot \nabla_i W_{ij}
+                                  -  \sum_j \frac{m_j}{\rho_j} \rho_j \underline{u}_i \cdot \nabla_i W_{ij} \Big]
    \end{equation*}
 
    Which gives us divergence approximation in terms of density
 
    \begin{equation}
      \label{eq:divergence_sph}%
-     \nabla \cdot \uline{u}_i &=  \frac{1}{\rho_i} \Big[ \sum_j {m_j} (\uline{u}_j
-                                  - \uline{u}_i) \cdot \nabla_i W_{ij} \Big]
+     \nabla \cdot \underline{u}_i =  \frac{1}{\rho_i} \Big[ \sum_j {m_j} (\underline{u}_j
+                                  - \underline{u}_i) \cdot \nabla_i W_{ij} \Big]
    \end{equation}
+
+
+** Gradient Approximation with density
+   Since in momentum equation ref:eq:momentum we have pressure force
+   as gradient of pressure, we need to derive SPH approximation of such
+   gradient. From naive approximation we have,
+
+
+  \begin{equation}
+    \label{eq:df_app}%
+    \nabla A(x_i) = \sum_i \frac{m_j}{\rho_j} A(x_j) \nabla_i W_{ij}
+  \end{equation}
+
+
+   A better approximation would be done by using density from /First
+   golden rule of SPH/ cite:monaghan-1992-smoot-partic-hydrod.  From
+   basic vector identities we have
+
+   \begin{align*}
+     \nabla \bigg( \frac{f}{g} \bigg) &= f\; \nabla \bigg( \frac{1}{g} \bigg) + \frac{1}{g} \nabla f \\
+     \frac{1}{g} \nabla f &= \nabla \bigg( \frac{f}{g} \bigg) - f\; \nabla \bigg( \frac{1}{g} \bigg) \\
+     \frac{1}{g} \nabla f &= \nabla \bigg( \frac{f}{g} \bigg) + \frac{f}{g^2} \; \nabla g
+   \end{align*}
+
+   in our case /f/ is pressure (p) and /g/ is density ($\rho$), and
+   approximating it for a particle,
+
+
+   \begin{equation*}
+     \frac{1}{\rho_i} \nabla p_i = \nabla \big( \frac{p_i}{\rho_i} \big) + \frac{p_i}{\rho_i^2} \; \nabla \rho
+   \end{equation*}
+
+   Approximating it using SPH, we have
+
+   \begin{equation*}
+     \frac{1}{\rho_i} \nabla p_i = \sum_j \frac{m_j}{\rho_j} \; \frac{p_j}{\rho_j} \nabla_i W_{ij} +
+                                    \frac{p_i}{\rho_i^2} \; \sum_j \frac{m_j}{\rho_j} \; \rho_j \nabla_i W_{ij}
+   \end{equation*}
+
+   Which gives us gradient of /p/ in terms of density as
+
+
+   \begin{equation}
+     \label{eq:df_sph}%
+     \frac{1}{\rho_i} \nabla p_i = \sum_j m_j \bigg( \frac{p_i}{\rho_i^2}  + \frac{p_j}{\rho_j^2} \bigg)\;\nabla_i W_{ij}
+   \end{equation}
+
+
+
+
+* Predictive Corrective Incompressible SPH (PCISPH)
+
+** Theory
+  One of ways to solve for incompressible fluids in SPH is using
+  PCISPH. In PCISPH, if the density at the next time step in more
+  compressible than the prescribed percent, the the pressure at the
+  current time is adjusted to nullify it to the prescribed limit.
+
+  The density is computed using summation density.
+
+  \begin{equation}
+    \label{eq:summation_density}%
+    \rho_i(t) = \sum_j m_j W(\underline{x}_i(t) - \underline{x}_j(t))
+  \end{equation}
+
+  Now, density at time $t + 1$ in terms of summation density can be written as,
+  and assuming equal mass(m) for each particle,
+  \begin{align*}
+    \rho_i(t+1) &= m \sum_j  W(\underline{x}_i(t+1) - \underline{x}_j(t+1)) \\
+                &= m \sum_j  W(\underline{x}_i(t) + \Delta \underline{x}_i(t) - \underline{x}_j(t) - \Delta \underline{x}_j(t)) \\
+                &= m \sum_j  W(\underline{d}_{ij}(t) + \Delta \underline{d}_{ij}(t))
+  \end{align*}
+
+  Where $\underline{d}_{ij}$ is $\underline{x}_i(t) - \underline{x}_j(t)$ and
+  $\Delta \underline{d}_{ij}$ is $\Delta\underline{x}_i(t) -
+  \Delta\underline{x}_j(t)$
+
+
+  Applying Taylor series approximation to kernel, we have
+
+  \begin{align*}
+    \rho_i(t+1) &= m \sum_j  W(\underline{d}_{ij}(t)) + m \sum_j  \nabla_i W(\underline{d}_{ij}(t)) \cdot \Delta \underline{d}_{ij}(t) \\
+                &= m \sum_j  W(\underline{x}_i(t) - \underline{x}_j(t)) + m \sum_j  \nabla_i W(\underline{x}_i(t) -
+                    \underline{x}_j(t)) \cdot (\Delta\underline{x}_i(t) - \Delta\underline{x}_j(t))\\
+  \end{align*}
+
+  The first term on the right hand side is the density at time /t/ and
+  the second term is the change at time /t+1/.
+
+  \begin{equation*}
+    \rho_i(t+1) = \rho_i(t) +  \Delta \rho_i(t)
+  \end{equation*}
+
+  The change in density can be written as
+
+  \begin{equation*}
+    \label{eq:density_difference}
+    \Delta \rho_i(t) = m \big(\Delta\underline{x}_i(t) \cdot \sum_j  \nabla_i W_{ij} -  \sum_j  \nabla_i W_{ij} \cdot \Delta\underline{x}_j(t) \big)
+  \end{equation*}
+
+  From the integrator scheme (Leap-Frog) we can estimate the change in position
+  of /x_i/ as
+
+
+  \begin{equation*}
+    \label{eq:Delta_x_i}%
+    \Delta \underline{x}_i  = \Delta t^2 \frac{\underline{F}_i^p}{m}
+  \end{equation*}
+
+  Since pressure force per unit mass is given by
+
+
+  \begin{equation*}
+    \frac{\underline{F}_i^p}{m} = - \frac{\nabla p_i}{\rho_i}
+  \end{equation*}
+
+  the right hand side can be written in terms of particle approximation of
+  gradient ref:eq:df_sph as
+
+  \begin{equation*}
+      \frac{\underline{F}_i^p}{m} = - \sum_j m_j \bigg( \frac{p_i}{\rho_i^2}  + \frac{p_j}{\rho_j^2} \bigg)\;\nabla_i W_{ij}
+  \end{equation*}
+
+  by assuming equal mass for every particle, this can be reformulated as
+
+  \begin{equation*}
+      \frac{\underline{F}_i^p}{m} = - m \sum_j \bigg( \frac{p_i}{\rho_i^2}  + \frac{p_j}{\rho_j^2} \bigg)\;\nabla_i W_{ij}
+  \end{equation*}
+
+  Which can be substituted in ref:eq:Delta_x_i, and can be solved for change in
+  position of /x_i/
+
+  \begin{equation*}
+    \Delta \underline{x}_i  = - \Delta t^2 \; m \; \sum_j \bigg( \frac{p_i}{\rho_i^2}  + \frac{p_j}{\rho_j^2} \bigg)\;\nabla_i W_{ij}
+  \end{equation*}
+
+  Further assuming the pressure of neighbourhood particles same as particle i,
+  and density for all the particles to be same i.e., $\rho_0$ we have
+
+  \begin{equation*}
+    \Delta \underline{x}_i  = - \Delta t^2 \; m \; \frac{2 \; \widetilde{p}_i}{\rho_0^2} \sum_j \nabla_i W_{ij}
+  \end{equation*}
+
+  Force acting on particle /i/ due to particle /j/ can be written as
+
+  \begin{equation*}
+    \underline{F}_j^p = m^2  \bigg( \frac{p_i}{\rho_0^2}  + \frac{p_j}{\rho_0^2} \bigg)\;\nabla_i W_{ij}
+  \end{equation*}
+
+  Note that the sign is reversed as there will be equal and opposite forces on
+  both the particles and the gradient is still evaluated with respect to
+  particle /i/. Due to such force, the change in position of particle at /j/ is
+  given by
+
+  \begin{equation*}
+    \Delta \underline{x}_j  = \Delta t^2 \; m \; \frac{2 \; \widetilde{p}_i}{\rho_0^2} \nabla_i W_{ij}
+  \end{equation*}
+
+  Now substitute particle /i/ and /j/ position change in density difference equation ref:eq:density_difference,
+  we have,
+
+
+  \begin{align*}
+    \Delta \rho_i(t) &= m \bigg( - \Delta t^2 \; m \; \frac{2 \; \widetilde{p}_i}{\rho_0^2} \sum_j \nabla_i W_{ij} \cdot \sum_j  \nabla_i W_{ij} -
+                       \sum_j  \nabla_i W_{ij} \cdot \Delta t^2 \; m \; \frac{2 \; \widetilde{p}_i}{\rho_0^2} \nabla_i W_{ij}\bigg)\\
+                     &= m^2  \Delta t^2 \; \frac{2 \; \widetilde{p}_i}{\rho_0^2} \bigg(- \sum_j \nabla_i W_{ij} \cdot \sum_j  \nabla_i W_{ij} -
+                       \sum_j  \nabla_i W_{ij} \cdot \nabla_i W_{ij} \bigg)
+  \end{align*}
+
+  Upon solving for pressure $\widetilde{p}$, we get
+
+  \begin{align*}
+    \widetilde{p}_i &= \frac{\Delta \rho_i(t)}{\beta \; \bigg(- \sum_j \nabla_i W_{ij} \cdot \sum_j  \nabla_i W_{ij} - \sum_j  \nabla_i W_{ij} \cdot \nabla_i W_{ij} \bigg)}
+  \end{align*}
+
+  To produce a density change of $\Delta \rho$ we need pressure
+  $\widetilde{p}_i$ as in above equation. But to nullify a density
+  change of $\rho_{err_i} = \rho_i^* - \rho_0$ we need pressure
+  $\widetilde{p}_i}$ as
+
+  \begin{align*}
+    \widetilde{p}_i &= \frac{-\rho_{err_i}}{\beta \; \bigg(- \sum_j \nabla_i W_{ij} \cdot \sum_j  \nabla_i W_{ij} - \sum_j  \nabla_i W_{ij} \cdot \nabla_i W_{ij} \bigg)}\\
+    \widetilde{p}_i &= \delta \; \rho_{err_i}
+  \end{align*}
+
+  where \delta is given by
+
+  \begin{equation}
+    \label{eq:pcisph_delta}%
+    \delta = \frac{-1}{\beta \; \bigg(- \sum_j \nabla_i W_{ij} \cdot \sum_j  \nabla_i W_{ij} - \sum_j  \nabla_i W_{ij} \cdot \nabla_i W_{ij} \bigg)}\\
+  \end{equation}
+
+** PySPH Implementation
+
+*** Creating particle array
+    /Note: Code is hosted at [[https://github.com/dineshadepu/src/blob/master/pcisph/pcisph.py/][github]]/
+    $\newline$
+
+    Since PCISPH involves, predicting and correcting the pressure
+    until we get the requisite pressure which nullifies the density
+    difference caused by other forces in the system, we create two
+    separate acceleration variables for PCISPH particle
+    array. Acceleration due to other forces is given by /$ao\_x$/ and
+    due to pressure force by /$ap\_x$/ in specific
+    dimensions. Pressure is updated using a pre-computed pressure
+    correction factor /delta/ as in equation
+    eqref:eq:pcisph_delta. This delta is saved as a constant to this
+    specific particle array. An overview is shown in
+    ref:src-pcisph_particle_array.
+
+    #+name: src-pcisph_particle_array
+    #+caption: Particle array of PCISPH
+    #+BEGIN_SRC python
+      def get_particle_array_pcisph(constants=None, **props):
+          pcisph_props = ['ao_x', 'ao_y', 'ao_z', 'ap_x', 'ap_y',
+                          'ap_z', 'rho_err']
+
+          # compression factor
+          consts = {'delta': [0.0]}
+          ########### rest code ############
+    #+END_SRC
+
+*** Create equations
+    Using /ClearAccelerationsAddGravity/ equation we clear the
+    accelerations of the particle array additionally add gravity if
+    specified.
+
+
+
+
 
 
 
@@ -125,41 +343,41 @@ incompressible SPH(PCISPH) are the schemes whih solve fluid for incompressibilit
 
   \begin{equation}
     \label{eq:iisph_advection}%
-    \uline{u}_i^{*}(t + dt) = \uline{u}_i(t) + \delta{t} \;
-                              \frac{1}{m_i} \uline{F}(t)_i^{\text{all except pressure}}
+    \underline{u}_i^{*}(t + dt) = \underline{u}_i(t) + \Delta{t} \;
+                              \frac{1}{m_i} \underline{F}(t)_i^{\text{all except pressure}}
   \end{equation}
 
-  Where \uline{u}_i^{*}(t + dt) is velocity at intermediate step. Once
+  Where $\underline{u}_i^{*}(t + dt)$ is velocity at intermediate step. Once
   we find the velocity at intermediate step, now we find the pressure
   force which will make it divergence free. Let's suppose such
   pressure forces as /F^p_i/. Now the final velocity with such
   pressure force would be
 
-** Pressure poisson equation
+** Pressure projection equation
 
   \begin{equation*}
-    \uline{u}_i(t + dt) = \uline{u}_i^{*}(t+dt) + \delta{t} \;
-                                \frac{1}{m_i} \; \uline{F}(t)_i^{p}
+    \underline{u}_i(t + dt) = \underline{u}_i^{*}(t+dt) + \Delta{t} \;
+                                \frac{1}{m_i} \; \underline{F}(t)_i^{p}
   \end{equation*}
 
-  Since the final velocity after pressure force correction is divergence free,
-  lets take divergence on both sides.
+  Since the final velocity after pressure force correction is
+  divergence free, lets take divergence on both sides.
 
   \begin{equation*}
-    \nabla \cdot \uline{u}_i(t + dt) = \nabla \cdot \uline{u}_i^{*}(t+dt) + \delta{t} \;
-                                       \frac{1}{m_i} \;  \nabla \cdot \uline{F}(t)_i^{p}
+    \nabla \cdot \underline{u}_i(t + dt) = \nabla \cdot \underline{u}_i^{*}(t+dt) + \Delta{t} \;
+                                       \frac{1}{m_i} \;  \nabla \cdot \underline{F}(t)_i^{p}
   \end{equation*}
 
   Since final velocity is divergence free,
 
   \begin{equation*}
-    \nabla \cdot \uline{u}_i(t + dt) = 0
+    \nabla \cdot \underline{u}_i(t + dt) = 0
   \end{equation*}
   which gives
 
   \begin{equation*}
-     \nabla \cdot \uline{u}_i^{*}(t+dt) = - \delta{t} \;
-                                       \frac{1}{m_i} \;  \nabla \cdot \uline{F}(t)_i^{p}
+     \nabla \cdot \underline{u}_i^{*}(t+dt) = - \Delta{t} \;
+                                       \frac{1}{m_i} \;  \nabla \cdot \underline{F}(t)_i^{p}
   \end{equation*}
 
   Pressure force is given by
@@ -168,16 +386,162 @@ incompressible SPH(PCISPH) are the schemes whih solve fluid for incompressibilit
     \frac{1}{m_i}  F(t)_i^{p} = - \frac{\nabla p_i}{\rho_i}
   \end{equation*}
 
-  Which gives us the final pressure Poisson equation(PPE) as
+  Which gives us the final pressure projection equation(PPE) as
+
+  \begin{equation*}
+    \nabla \cdot \nabla p_i = \frac{\rho_i}{\Delta{t}} \nabla \cdot \underline{u}_i^{*}(t+dt)
+  \end{equation*}
+
+  Right hand term can be further simplified using SPH divergence approximation as,
+
+  \begin{equation*}
+    \nabla \cdot \underline{u}_i^{*}(t+dt) =  \frac{1}{\rho_i} \Big[ \sum_j {m_j} (\underline{u}^*_j- \underline{u}_i^*) \cdot \nabla_i W_{ij} \Big]
+  \end{equation*}
+
+  which simplifies PPE to
 
   \begin{equation}
     \label{eq:ppe}%
-    \nabla \cdot \nabla p_i = \frac{\rho_i}{\delta{t}} \nabla \cdot \uline{u}_i^{*}(t+dt)
+    \nabla \cdot \nabla p_i = \frac{1}{\Delta{t}} \; \Big[ \sum_j {m_j} (\underline{u}^*_j- \underline{u}_i^*) \cdot \nabla_i W_{ij} \Big]
   \end{equation}
-
-
 ** Obtaining a linear system
-   Right hand side of PPE can be derived in terms of density difference.
+   Right hand side of PPE can be written in terms of density
+   difference using continuity equation. From continuity equation
+   we have
+
+   \begin{equation*}
+     \frac{D\rho}{Dt} = -\rho \; \nabla \cdot \underline{u}
+   \end{equation*}
+
+   Right hand side can be approximated using divergence approximation
+   ref:eq:divergence_sph in SPH and using implicit Euler scheme,
+
+   \begin{equation*}
+    \nabla \cdot \underline{u} = - \frac{1}{\rho_i} \sum_j m_j (\underline{u}_i^* - \underline{u}_j^*) \nabla_i W_{ij}(t)
+   \end{equation*}
+
+
+   \begin{equation*}
+    \sum_j m_j (\underline{u}_i^* - \underline{u}_j^*) \nabla_i W_{ij}(t) = \frac{D\rho_i}{Dt}
+   \end{equation*}
+
+   \begin{equation*}
+     \sum_j m_j (\underline{u}_i^* - \underline{u}_j^*) \nabla_i W_{ij}(t) = \frac{\rho_i^* - \rho_0}{\Delta t}
+   \end{equation*}
+
+   Rewriting PPE,
+
+   \begin{equation*}
+     \nabla \cdot \nabla p_i = \frac{1}{\Delta{t}} \; \Big[ \sum_j {m_j} (\underline{u}^*_j- \underline{u}_i^*) \cdot \nabla_i W_{ij} \Big]
+   \end{equation*}
+
+   Applying divergence approximation to it results in,
+
+
+   \begin{equation*}
+     \nabla \cdot \nabla p_i = \frac{\rho_0 - \rho_i^*}{\Delta t^2}
+   \end{equation*}
+
+   From incompressibility we can write the above equation as
+
+   \begin{equation*}
+     \rho_i \nabla \cdot \bigg( \frac{1}{\rho_i} \nabla p_i\bigg) = \frac{\rho_0 - \rho_i^*}{\Delta t^2}
+   \end{equation*}
+
+   Left hand side can be written in terms of forces acting on the particles, as
+
+   \begin{equation*}
+     \rho_0 - \rho_i^* =  {\Delta t^2} \sum_j m_j \bigg( \frac{F_i^p}{m_i}  +
+                          \frac{F_j^p}{m_j} \bigg) \cdot \nabla_i W_{ij}
+   \end{equation*}
+
+   Using pressure force equations, we get,
+
+   Force per unit mass multiplied by $\Delta t^2$ of particle i and j can be written as,
+
+
+   \begin{align*}
+     {\Delta t^2} \frac{F_i^p}{m_i}  &= - \Delta t^2 \frac{\nabla p_i}{\rho_i} \\
+                                   &= - \Delta t^2 \sum_j m_j \bigg( \frac{p_i}{\rho_i^2} +
+                                     \frac{p_j}{\rho_j^2} \bigg)\;\nabla_i W_{ij} \\
+                                   &= - \Delta t^2 \sum_j \, \frac{m_j}{\rho_i^2} \,
+                                     \nabla_i W_{ij} \, p_i + \sum_j \, - \Delta t^2 \, \frac{m_j}
+                                     {\rho_j^2} \, \nabla_i W_{ij} \, p_j \\
+                                   &= \underline{d}_{ii} \, p_i + \sum_j \underline{d}_{ij} \, p_j
+   \end{align*}
+
+   where $\underline{d}_{ii} = - \Delta t^2 \sum_j \,
+   \frac{m_j}{\rho_i^2} \, \nabla_i W_{ij}$ and $\underline{d}_{ij}
+   = - \Delta t^2 \, \frac{m_j}{\rho_i^2} \, \nabla_i W_{ij}$. Similar
+   expression can be written for particle j, as
+
+   \begin{equation*}
+     {\Delta t^2} \frac{F_j^p}{m_j} = \underline{d}_{jj} \, p_j + \sum_k \underline{d}_{jk} \, p_k
+   \end{equation*}
+
+   where $\underline{d}_{jj} = - \Delta t^2 \sum_k \,
+   \frac{m_k}{\rho_j^2} \, \nabla_j W_{jk}$ and $\underline{d}_{jk}
+   = - \Delta t^2 \, \frac{m_k}{\rho_k^2} \, \nabla_j W_{jk}$. Where k
+   particle indices are neighbours of particle j. Using these equation
+   we can rewrite the pressure poison equation as
+
+   \begin{equation}
+     \label{eq:iisph_ppe_coefficients}
+     \rho_0 - \rho_i^* =\sum_j \Bigg(\underline{d}_{ii} \, p_i + \sum_j \underline{d}_{ij} \, p_j -
+                        \underline{d}_{jj} \, p_j - \sum_k \underline{d}_{jk} \, p_k \Bigg)
+                        \cdot \nabla_i W_{ij}
+   \end{equation}
+
+   Before proceeding further, let us take five sample particles as in
+   figure ref:fig:iisph_illustration and see how the linear equation
+   for pressure looks like.
+
+   #+name: fig:iisph_illustration
+   #+CAPTION: Sample particles in fluid domain with supporting length
+   #+ATTR_LATEX: :width 5cm
+   [[./images/iisph_illustration.png]]
+
+
+   From figure ref:fig:iisph_illustration, particle 1 has 2
+   neighbours, which influence the its behaviour, they are 2, 3. Even
+   particle 2 and 3 has two neighbours which influence their
+   properties. Particle 2 neighbours are 1, 4 and particle 3
+   neighbours are 1, 5. With this information, the pressure equation
+   of particle 1 from equation ref:eq:iisph_ppe_coefficients can be
+   written as
+
+
+   \begin{align*}
+     \begin{split}
+       m_2 (d_{11} \,p_1 + d_{12}\, p_2 + d_{13}\, p_3 - d_{22} \,p_2 -
+       d_{25} \, p_5 - d_{21} p_1) \nabla_1 W_{12} \;+ \\
+       m_3 (d_{11} \,p_1 + d_{12}\, p_2 + d_{13}\, p_3 - d_{33} \,p_3 -
+       d_{34} \, p_4 - d_{31} \, p_1) \nabla_1 W_{13} &= \rho_0 - \rho_i^*
+     \end{split}
+   \end{align*}
+
+   From last term of l.h.s we can see that contributions of
+   neighbours of j has particle i. From this point we can re-write
+   equation ref:eq:iisph_ppe_coefficients as
+
+   \begin{equation}
+     \label{eq:iisph_ppe_coefficients_separated_neighbours}
+     \begin{split}
+     \rho_0 - \rho_i^* & =  \sum_j \big(\underline{d}_{ii} \, - \, \underline{d}_{ji} \big) \cdot
+                        \nabla_i W_{ij}\, p_i \, +  \\
+                        &\, \sum_j m_j \bigg( \sum_j
+                        \underline{d}_{ij} \, p_j \, -
+                        \, \underline{d}_{jj} \, p_j \, -
+                         \, \sum_{k \neq i} \underline{d}_{jk} \, p_k
+                        \bigg)\cdot \nabla_i W_{ij}
+     \end{split}
+   \end{equation}
+
+
+
+
+
+* Divergence Free Smoothed Particle Hydrodynamics (DFSPH)
 
 * Bibliography
   bibliography:~/Dropbox/Research/references.bib
